@@ -1,0 +1,27 @@
+# Arquivos de configuração do PyCharm
+.idea/
+/.idea/**
+*.iml
+/venv/
+**/__pycache__/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+venv/
+
+# Arquivo de configuração VsCode
+.venv
+.env
+
+__pycache__
+*.py[cod]
+
+.pytest_cache/
+
+# Scripts
+scripts/*
+# certs/*
+k8s/homolog/coneq-api-config.yaml
+k8s/coneq-api-config.yaml
