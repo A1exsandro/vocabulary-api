@@ -18,3 +18,13 @@ async def create_marca(
 ):
     await CategoryRepository.create(create_form, db) 
     return CategoryResponse(detail="Categoria Criada com sucesso!")
+
+
+# READ
+@router.get('')
+async def get_all_marca(
+    db: AsyncSession = Depends(get_db),
+    limit: int = Query(100, ge=1), 
+    offset: int = Query(0, ge=0)
+):
+    return await CategoryRepository.get_all(db, limit=limit, offset=offset)
