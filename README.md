@@ -16,3 +16,7 @@
 * pip install -r requirements.txt
 
 * pip freeze > requirements.txt
+
+# Build
+docker build -t registry.nst.art.br/vocabulary-api:0.0.2 -f Dockerfile .
+docker push registry.nst.art.br/vocabulary-api:0.0.2
