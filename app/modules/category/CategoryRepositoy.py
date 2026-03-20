@@ -3,23 +3,46 @@ from sqlalchemy.sql import select
 
 from app.core.config import commit_rollback
 from app.modules.category.CategorySchema import CategoryCreate
-from app.modules.category.CategoryModel import Category
+from app.modules.category.CategoryModel import Category, UserCategory
+from app.integrations.openrouter_client import generate_sentences
 
 
 class CategoryRepository:
+    def __init__(self, db: AsyncSession):
+        self.db = db
 
     # CREATE
-    @staticmethod
-    async def create(create_form: CategoryCreate, db: AsyncSession):
-        name_upcase = create_form.name.upper()
-        user_id = create_form.user_id
-        db.add(Category(name=name_upcase, user_id=user_id))
-        await commit_rollback(db)
+    async def create_category(self, name): 
+        category = Category(name=name)
+        self.db.add(category)
+        await self.db.commit()
+        await self.db.refresh(category)
+
+        return category
+    
+
+    # CRIA A RELAÇÃO CATEGORIA USER
+    async def link_user_category(self, user_id, category_id):
+        user_category = UserCategory(
+            user_id=user_id,
+            category_id=category_id
+        ) 
+        self.db.add(user_category)
+        await self.db.commit()
+        
+
+    # GET CATEGORY BY NAME
+    async def get_category_by_name(self, english: str):
+        stmt = select(Category).where(Category.name == english)
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
 
 
-    # READ
-    @staticmethod
-    async def get_all(db: AsyncSession, limit: int = 10, offset: int = 0):
-        query = select(Category).limit(limit).offset(offset)
-        result = await db.execute(query)
-        return result.scalars().all()
+    # VERIFICA SE EXISTE RELAÇÃO CATEGORIA USER
+    async def exists_user_category(self, user_id, category_id):
+        stmt = select(UserCategory).where(
+            UserCategory.user_id == user_id,
+            UserCategory.category_id == category_id
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none() is not None
