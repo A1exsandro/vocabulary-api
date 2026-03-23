@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.application.ports.audio_generator import AudioGenerator
 from app.application.ports.image_generator import ImageGenerator
 from app.application.ports.vocabulary_enricher import VocabularyEnricher
+from app.application.word.use_cases.sentence_payload import normalize_sentences
 from app.core.config import commit_rollback
 from app.core.exceptions import ConflictError, NotFoundError
 from app.modules.word.WordRepositoy import WordRepository
@@ -29,17 +30,18 @@ class UpdateWordUseCase:
         phrases_data = self.vocabulary_enricher.enrich(english)
         correct_word = phrases_data["correct_word"]
         translation = phrases_data["translation"]
-        sentences = phrases_data["sentences"]
+        sentences = normalize_sentences(phrases_data.get("sentences"))
 
         image_key = await self.image_generator.generate(correct_word)
         audio_key = await self.audio_generator.generate(correct_word)
 
         phrase_records = []
         for sentence in sentences:
-            sentence_audio_key = await self.audio_generator.generate(sentence)
+            sentence_audio_key = await self.audio_generator.generate(sentence["english"])
             phrase_records.append(
                 {
-                    "text": sentence,
+                    "text": sentence["english"],
+                    "translation": sentence.get("portuguese"),
                     "audio_key": sentence_audio_key,
                 }
             )

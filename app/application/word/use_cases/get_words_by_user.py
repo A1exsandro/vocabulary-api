@@ -5,7 +5,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
 from app.integrations.s3_client import s3_client
-from app.modules.word.WordModel import Word, UserWord, WordCategory
+from app.modules.word.WordModel import UserWord, Word, WordCategory
 
 S3_AUDIO_BUCKET_NAME = os.getenv("S3_AUDIO_BUCKET_NAME")
 S3_IMAGE_BUCKET_NAME = os.getenv("S3_IMAGE_BUCKET_NAME")
@@ -60,6 +60,7 @@ class GetWordsByUserUseCase:
                     {
                         "id": phrase.id,
                         "text": phrase.text,
+                        "translation": phrase.translation,
                         "audioUrl": phrase_audio_url,
                     }
                 )

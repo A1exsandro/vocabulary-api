@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.application.ports.audio_generator import AudioGenerator
 from app.application.ports.image_generator import ImageGenerator
 from app.application.ports.vocabulary_enricher import VocabularyEnricher
+from app.application.word.use_cases.sentence_payload import normalize_sentences
 from app.core.config import commit_rollback
 from app.modules.word.WordRepositoy import WordRepository
 from app.modules.word.WordSchema import WordCreate, WordResponse
@@ -31,7 +32,7 @@ class CreateWordUseCase:
             phrases_data = self.vocabulary_enricher.enrich(create_form.english)
             correct_word = phrases_data["correct_word"]
             translation = phrases_data["translation"]
-            sentences = phrases_data["sentences"]
+            sentences = normalize_sentences(phrases_data.get("sentences"))
 
             word = await self.repository.get_by_english(correct_word)
             if word and await self.repository.exists_user_word(create_form.user_id, word.id):
@@ -52,8 +53,13 @@ class CreateWordUseCase:
                 )
 
                 for sentence in sentences:
-                    sentence_audio_key = await self.audio_generator.generate(sentence)
-                    await self.repository.create_phrase(word.id, sentence, sentence_audio_key)
+                    sentence_audio_key = await self.audio_generator.generate(sentence["english"])
+                    await self.repository.create_phrase(
+                        word_id=word.id,
+                        text=sentence["english"],
+                        translation=sentence.get("portuguese"),
+                        audio_key=sentence_audio_key,
+                    )
 
         await self.repository.link_user_word(create_form.user_id, word.id)
         await commit_rollback(self.db)

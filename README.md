@@ -116,6 +116,8 @@ Base path:
 ### Word
 
 - `POST /word`
+- `POST /word/import`
+- `POST /word/import/file`
 - `PUT /word/{word_id}`
 - `DELETE /word/{word_id}`
 - `GET /word/words?user_id=...&category_id=...`

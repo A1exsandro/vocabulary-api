@@ -1,11 +1,10 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select
 
-from app.modules.word.WordModel import Word, Phrase, UserWord, WordCategory
+from app.modules.word.WordModel import Phrase, UserWord, Word, WordCategory
 
 
 class WordRepository:
-
     def __init__(self, db: AsyncSession):
         self.db = db
 
@@ -19,7 +18,7 @@ class WordRepository:
             english=english,
             portuguese=portuguese,
             image_key=image_key,
-            audio_key=audio_key
+            audio_key=audio_key,
         )
 
         self.db.add(word)
@@ -28,11 +27,12 @@ class WordRepository:
 
         return word
 
-    async def create_phrase(self, word_id, text, audio_key):
+    async def create_phrase(self, word_id, text, audio_key, translation=None):
         phrase = Phrase(
             word_id=word_id,
             text=text,
-            audio_key=audio_key
+            translation=translation,
+            audio_key=audio_key,
         )
         self.db.add(phrase)
         await self.db.flush()
@@ -42,10 +42,7 @@ class WordRepository:
         self.db.add(user_word)
 
     async def exists_user_word(self, user_id, word_id):
-        stmt = select(UserWord).where(
-            UserWord.user_id == user_id,
-            UserWord.word_id == word_id
-        )
+        stmt = select(UserWord).where(UserWord.user_id == user_id, UserWord.word_id == word_id)
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none() is not None
 
@@ -57,7 +54,7 @@ class WordRepository:
     async def get_word_category(self, word_id, category_id):
         stmt = select(WordCategory).where(
             WordCategory.word_id == word_id,
-            WordCategory.category_id == category_id
+            WordCategory.category_id == category_id,
         )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
@@ -99,16 +96,14 @@ class WordRepository:
             phrase_model = Phrase(
                 word_id=word_id,
                 text=phrase["text"],
-                audio_key=phrase["audio_key"]
+                translation=phrase.get("translation"),
+                audio_key=phrase.get("audio_key"),
             )
             self.db.add(phrase_model)
         await self.db.flush()
 
     async def unlink_user_word(self, user_id, word_id):
-        stmt = select(UserWord).where(
-            UserWord.user_id == user_id,
-            UserWord.word_id == word_id
-        )
+        stmt = select(UserWord).where(UserWord.user_id == user_id, UserWord.word_id == word_id)
         result = await self.db.execute(stmt)
         user_word = result.scalar_one_or_none()
 
