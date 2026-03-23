@@ -2,8 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from app.modules import router as modules_router
 from app.core.config import db
+from app.core.exception_handlers import register_exception_handlers
+from app.modules import router as modules_router
 
 origins=["*"]
 
@@ -33,6 +34,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+register_exception_handlers(app)
 
 app.include_router(modules_router)
 

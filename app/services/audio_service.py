@@ -13,7 +13,7 @@ class AudioService:
 
         mp3_buffer = io.BytesIO()
 
-        tts = gTTS(text=word, lang="en")
+        tts = gTTS(text=word, lang="en", tld="com")
         tts.write_to_fp(mp3_buffer)
         mp3_buffer.seek(0)
 

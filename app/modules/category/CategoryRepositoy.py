@@ -1,44 +1,32 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select
 
-from app.core.config import commit_rollback
-from app.modules.category.CategorySchema import CategoryCreate
 from app.modules.category.CategoryModel import Category, UserCategory
-from app.integrations.openrouter_client import generate_sentences
+from app.modules.word.WordModel import WordCategory
 
 
 class CategoryRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    # CREATE
-    async def create_category(self, name): 
+    async def create_category(self, name):
         category = Category(name=name)
         self.db.add(category)
-        await self.db.commit()
-        await self.db.refresh(category)
-
+        await self.db.flush()
         return category
-    
 
-    # CRIA A RELAÇÃO CATEGORIA USER
     async def link_user_category(self, user_id, category_id):
         user_category = UserCategory(
             user_id=user_id,
             category_id=category_id
-        ) 
+        )
         self.db.add(user_category)
-        await self.db.commit()
-        
 
-    # GET CATEGORY BY NAME
-    async def get_category_by_name(self, english: str):
-        stmt = select(Category).where(Category.name == english)
+    async def get_category_by_name(self, name: str):
+        stmt = select(Category).where(Category.name == name)
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
-
-    # VERIFICA SE EXISTE RELAÇÃO CATEGORIA USER
     async def exists_user_category(self, user_id, category_id):
         stmt = select(UserCategory).where(
             UserCategory.user_id == user_id,
@@ -46,3 +34,39 @@ class CategoryRepository:
         )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none() is not None
+
+    async def get_by_id(self, category_id):
+        stmt = select(Category).where(Category.id == category_id)
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def count_user_links(self, category_id):
+        stmt = select(UserCategory).where(UserCategory.category_id == category_id)
+        result = await self.db.execute(stmt)
+        return len(result.scalars().all())
+
+    async def update_category_name(self, category: Category, name: str):
+        category.name = name
+        self.db.add(category)
+        return category
+
+    async def count_word_links(self, category_id):
+        stmt = select(WordCategory).where(WordCategory.category_id == category_id)
+        result = await self.db.execute(stmt)
+        return len(result.scalars().all())
+
+    async def unlink_user_category(self, user_id, category_id):
+        stmt = select(UserCategory).where(
+            UserCategory.user_id == user_id,
+            UserCategory.category_id == category_id
+        )
+        result = await self.db.execute(stmt)
+        user_category = result.scalar_one_or_none()
+
+        if user_category:
+            await self.db.delete(user_category)
+
+        return user_category
+
+    async def delete_category(self, category: Category):
+        await self.db.delete(category)

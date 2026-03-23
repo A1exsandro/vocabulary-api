@@ -8,7 +8,7 @@ PIXABAY_API_KEY = os.getenv("PIXABAY_API_KEY")
 def fetch_image_from_pixabay(query: str) -> bytes:
     """
         MELHORIAS
-        - [ ] Fornecer um arrqy de imagens para o usuário escolher uma
+        - [ ] Fornecer um array de imagens para o usuário escolher uma
     """
 
     if not PIXABAY_API_KEY:
