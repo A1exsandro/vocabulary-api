@@ -67,6 +67,7 @@ class GetWordsByUserUseCase:
 
             response.append(
                 {
+                    "id": word.id,
                     "userId": user_id,
                     "english": word.english,
                     "portuguese": word.portuguese,

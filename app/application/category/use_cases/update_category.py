@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.application.ports.vocabulary_enricher import VocabularyEnricher
 from app.core.config import commit_rollback
 from app.core.exceptions import ConflictError, NotFoundError
+from app.core.text_normalization import to_title_label
 from app.modules.category.CategoryRepositoy import CategoryRepository
 from app.modules.category.CategorySchema import CategoryResponse, CategoryUpdate
 
@@ -23,8 +24,8 @@ class UpdateCategoryUseCase:
         if not await self.repository.exists_user_category(update_form.user_id, category_id):
             raise NotFoundError("Categoria não encontrada para este usuário.")
 
-        category_data = self.vocabulary_enricher.enrich(update_form.name)
-        normalized_name = category_data["correct_word"]
+        category_data = self.vocabulary_enricher.enrich(update_form.name.strip())
+        normalized_name = to_title_label(category_data["correct_word"])
         user_links = await self.repository.count_user_links(category_id)
         word_links = await self.repository.count_word_links(category_id)
 

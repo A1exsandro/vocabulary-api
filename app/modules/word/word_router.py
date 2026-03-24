@@ -36,7 +36,11 @@ async def create_word(create_form: WordCreate, db: AsyncSession = Depends(get_db
 
 @router.post("/import", response_model=WordImportResponse, response_model_exclude_none=True)
 async def import_words(payload: WordImportRequest, db: AsyncSession = Depends(get_db)):
-    return await ImportWordsUseCase(db).execute(payload)
+    return await ImportWordsUseCase(
+        db,
+        get_audio_generator(),
+        get_image_generator(),
+    ).execute(payload)
 
 
 @router.post("/import/file", response_model=WordImportResponse, response_model_exclude_none=True)
@@ -60,7 +64,11 @@ async def import_words_from_file(
         payload_dict["schema_version"] = "1.0"
 
     payload = WordImportRequest(**payload_dict)
-    return await ImportWordsUseCase(db).execute(payload)
+    return await ImportWordsUseCase(
+        db,
+        get_audio_generator(),
+        get_image_generator(),
+    ).execute(payload)
 
 
 @router.put("/{word_id}", response_model=WordResponse, response_model_exclude_none=True)

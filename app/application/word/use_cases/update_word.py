@@ -8,6 +8,7 @@ from app.application.ports.vocabulary_enricher import VocabularyEnricher
 from app.application.word.use_cases.sentence_payload import normalize_sentences
 from app.core.config import commit_rollback
 from app.core.exceptions import ConflictError, NotFoundError
+from app.core.text_normalization import to_title_label
 from app.modules.word.WordRepositoy import WordRepository
 from app.modules.word.WordSchema import WordResponse, WordUpdate
 
@@ -28,7 +29,7 @@ class UpdateWordUseCase:
 
     async def _build_word_assets(self, english: str):
         phrases_data = self.vocabulary_enricher.enrich(english)
-        correct_word = phrases_data["correct_word"]
+        correct_word = to_title_label(phrases_data["correct_word"])
         translation = phrases_data["translation"]
         sentences = normalize_sentences(phrases_data.get("sentences"))
 
@@ -48,6 +49,14 @@ class UpdateWordUseCase:
 
         return correct_word, translation, image_key, audio_key, phrase_records
 
+    async def _cleanup_orphan_word(self, word_id: UUID, word) -> None:
+        if await self.repository.count_user_links(word_id) > 0:
+            return
+
+        await self.repository.delete_phrases_by_word_id(word_id)
+        await self.repository.delete_word_categories_by_word_id(word_id)
+        await self.repository.delete_word(word)
+
     async def execute(self, word_id: UUID, update_form: WordUpdate) -> WordResponse:
         word = await self.repository.get_by_id(word_id)
         if not word:
@@ -57,32 +66,14 @@ class UpdateWordUseCase:
             raise NotFoundError("Palavra não encontrada para este usuário.")
 
         correct_word, translation, image_key, audio_key, phrase_records = await self._build_word_assets(
-            update_form.english
+            update_form.english.strip()
         )
+
+        user_existing_target = await self.repository.get_user_word_by_english(update_form.user_id, correct_word)
+        if user_existing_target and user_existing_target.id != word_id:
+            raise ConflictError("Essa palavra já está na sua lista.")
+
         user_links = await self.repository.count_user_links(word_id)
-
-        if user_links > 1 and correct_word == word.english:
-            await self.repository.ensure_word_category(word_id, update_form.category_id)
-            await commit_rollback(self.db)
-            return WordResponse(detail="Palavra atualizada com sucesso.")
-
-        existing_word = await self.repository.get_by_english(correct_word)
-        if existing_word and existing_word.id != word_id:
-            if await self.repository.exists_user_word(update_form.user_id, existing_word.id):
-                raise ConflictError("Essa palavra já está na sua lista.")
-
-            await self.repository.ensure_word_category(existing_word.id, update_form.category_id)
-            await self.repository.link_user_word(update_form.user_id, existing_word.id)
-            await self.repository.unlink_user_word(update_form.user_id, word_id)
-
-            if await self.repository.count_user_links(word_id) == 0:
-                await self.repository.delete_phrases_by_word_id(word_id)
-                await self.repository.delete_word_categories_by_word_id(word_id)
-                await self.repository.delete_word(word)
-
-            await commit_rollback(self.db)
-            return WordResponse(detail="Palavra atualizada com sucesso.")
-
         if user_links > 1:
             new_word = await self.repository.create_word(
                 english=correct_word,
@@ -90,6 +81,7 @@ class UpdateWordUseCase:
                 image_key=image_key,
                 audio_key=audio_key,
                 category_id=update_form.category_id,
+                owner_user_id=update_form.user_id,
             )
             await self.repository.replace_phrases(new_word.id, phrase_records)
             await self.repository.link_user_word(update_form.user_id, new_word.id)
@@ -97,7 +89,14 @@ class UpdateWordUseCase:
             await commit_rollback(self.db)
             return WordResponse(detail="Palavra atualizada com sucesso.")
 
-        await self.repository.update_word(word, correct_word, translation, image_key, audio_key)
+        await self.repository.update_word(
+            word,
+            correct_word,
+            translation,
+            image_key,
+            audio_key,
+            owner_user_id=update_form.user_id,
+        )
         await self.repository.ensure_word_category(word_id, update_form.category_id)
         await self.repository.replace_phrases(word_id, phrase_records)
         await commit_rollback(self.db)

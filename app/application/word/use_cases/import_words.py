@@ -1,14 +1,19 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.application.ports.audio_generator import AudioGenerator
+from app.application.ports.image_generator import ImageGenerator
 from app.core.exceptions import ConflictError
+from app.core.text_normalization import to_title_label
 from app.modules.word.WordRepositoy import WordRepository
 from app.modules.word.WordSchema import WordImportError, WordImportItem, WordImportRequest, WordImportResponse
 
 
 class ImportWordsUseCase:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, audio_generator: AudioGenerator, image_generator: ImageGenerator):
         self.db = db
         self.repository = WordRepository(db)
+        self.audio_generator = audio_generator
+        self.image_generator = image_generator
 
     async def execute(self, payload: WordImportRequest) -> WordImportResponse:
         created = 0
@@ -53,42 +58,60 @@ class ImportWordsUseCase:
             errors=errors,
         )
 
+    async def _build_phrase_records(self, item: WordImportItem):
+        phrase_records = []
+        for sentence in item.sentences:
+            english = sentence.english.strip()
+            if not english:
+                continue
+
+            phrase_records.append(
+                {
+                    "text": english,
+                    "translation": sentence.portuguese.strip(),
+                    "audio_key": await self.audio_generator.generate(english),
+                }
+            )
+
+        return phrase_records
+
+    async def _cleanup_orphan_word(self, word_id, word) -> None:
+        if await self.repository.count_user_links(word_id) > 0:
+            return
+
+        await self.repository.delete_phrases_by_word_id(word_id)
+        await self.repository.delete_word_categories_by_word_id(word_id)
+        await self.repository.delete_word(word)
+
     async def _import_item(self, payload: WordImportRequest, item: WordImportItem) -> str:
-        english = item.english.strip().lower()
+        english = to_title_label(item.english)
         portuguese = item.portuguese.strip()
-        phrase_records = [
-            {
-                "text": sentence.english.strip(),
-                "translation": sentence.portuguese.strip(),
-                "audio_key": None,
-            }
-            for sentence in item.sentences
-            if sentence.english.strip()
-        ]
+        phrase_records = await self._build_phrase_records(item)
 
         if not english:
             raise ValueError("english vazio.")
 
-        word = await self.repository.get_by_english(english)
+        user_word = await self.repository.get_user_word_by_english(payload.user_id, english)
+        if not user_word:
+            shareable_word = await self.repository.get_shareable_word_by_english(english)
+            if shareable_word:
+                await self.repository.ensure_word_category(shareable_word.id, payload.category_id)
+                await self.repository.link_user_word(payload.user_id, shareable_word.id)
+                return "linked"
 
-        if not word:
+            image_key = await self.image_generator.generate(english)
+            audio_key = await self.audio_generator.generate(english)
             word = await self.repository.create_word(
                 english=english,
                 portuguese=portuguese,
-                image_key=None,
-                audio_key=None,
+                image_key=image_key,
+                audio_key=audio_key,
                 category_id=payload.category_id,
+                owner_user_id=payload.user_id,
             )
             await self.repository.replace_phrases(word.id, phrase_records)
             await self.repository.link_user_word(payload.user_id, word.id)
             return "created"
-
-        user_has_word = await self.repository.exists_user_word(payload.user_id, word.id)
-
-        if not user_has_word:
-            await self.repository.ensure_word_category(word.id, payload.category_id)
-            await self.repository.link_user_word(payload.user_id, word.id)
-            return "linked"
 
         if payload.mode == "skip":
             return "skipped"
@@ -96,19 +119,32 @@ class ImportWordsUseCase:
         if payload.mode == "error":
             raise ConflictError("Essa palavra já está na sua lista.")
 
-        user_links = await self.repository.count_user_links(word.id)
+        user_links = await self.repository.count_user_links(user_word.id)
+        image_key = await self.image_generator.generate(english)
+        audio_key = await self.audio_generator.generate(english)
+
         if user_links > 1:
-            raise ConflictError(
-                "Não foi possível atualizar porque a palavra é compartilhada por outros usuários."
+            new_word = await self.repository.create_word(
+                english=english,
+                portuguese=portuguese,
+                image_key=image_key,
+                audio_key=audio_key,
+                category_id=payload.category_id,
+                owner_user_id=payload.user_id,
             )
+            await self.repository.replace_phrases(new_word.id, phrase_records)
+            await self.repository.link_user_word(payload.user_id, new_word.id)
+            await self.repository.unlink_user_word(payload.user_id, user_word.id)
+            return "updated"
 
         await self.repository.update_word(
-            word=word,
+            word=user_word,
             english=english,
             portuguese=portuguese,
-            image_key=word.image_key,
-            audio_key=word.audio_key,
+            image_key=image_key,
+            audio_key=audio_key,
+            owner_user_id=payload.user_id,
         )
-        await self.repository.ensure_word_category(word.id, payload.category_id)
-        await self.repository.replace_phrases(word.id, phrase_records)
+        await self.repository.ensure_word_category(user_word.id, payload.category_id)
+        await self.repository.replace_phrases(user_word.id, phrase_records)
         return "updated"

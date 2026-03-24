@@ -1,7 +1,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import commit_rollback
 from app.application.ports.vocabulary_enricher import VocabularyEnricher
+from app.core.config import commit_rollback
+from app.core.text_normalization import to_title_label
 from app.modules.category.CategoryRepositoy import CategoryRepository
 from app.modules.category.CategorySchema import CategoryCreate, CategoryResponse
 
@@ -13,13 +14,14 @@ class CreateCategoryUseCase:
         self.vocabulary_enricher = vocabulary_enricher
 
     async def execute(self, create_form: CategoryCreate) -> CategoryResponse:
-        category = await self.repository.get_category_by_name(create_form.name)
+        normalized_input = to_title_label(create_form.name)
+        category = await self.repository.get_category_by_name(normalized_input)
         if category and await self.repository.exists_user_category(create_form.user_id, category.id):
             return CategoryResponse(detail="Essa Categoria já está na sua lista.")
 
         if not category:
-            category_data = self.vocabulary_enricher.enrich(create_form.name)
-            correct_word = category_data["correct_word"]
+            category_data = self.vocabulary_enricher.enrich(create_form.name.strip())
+            correct_word = to_title_label(category_data["correct_word"])
             category = await self.repository.get_category_by_name(correct_word)
 
             if category and await self.repository.exists_user_category(create_form.user_id, category.id):

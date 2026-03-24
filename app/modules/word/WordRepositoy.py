@@ -1,3 +1,4 @@
+from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select
 
@@ -9,16 +10,43 @@ class WordRepository:
         self.db = db
 
     async def get_by_english(self, english: str):
-        stmt = select(Word).where(Word.english == english)
+        normalized = english.lower()
+        stmt = (
+            select(Word)
+            .where(func.lower(Word.english) == normalized)
+            .order_by(Word.owner_user_id.is_not(None), Word.id)
+        )
         result = await self.db.execute(stmt)
-        return result.scalar_one_or_none()
+        return result.scalars().first()
 
-    async def create_word(self, english, portuguese, image_key, audio_key, category_id):
+    async def get_shareable_word_by_english(self, english: str):
+        normalized = english.lower()
+        stmt = (
+            select(Word)
+            .where(func.lower(Word.english) == normalized, Word.owner_user_id.is_(None))
+            .order_by(Word.id)
+        )
+        result = await self.db.execute(stmt)
+        return result.scalars().first()
+
+    async def get_user_word_by_english(self, user_id: str, english: str):
+        normalized = english.lower()
+        stmt = (
+            select(Word)
+            .join(UserWord)
+            .where(UserWord.user_id == user_id, func.lower(Word.english) == normalized)
+            .order_by(Word.id)
+        )
+        result = await self.db.execute(stmt)
+        return result.scalars().first()
+
+    async def create_word(self, english, portuguese, image_key, audio_key, category_id, owner_user_id=None):
         word = Word(
             english=english,
             portuguese=portuguese,
             image_key=image_key,
             audio_key=audio_key,
+            owner_user_id=owner_user_id,
         )
 
         self.db.add(word)
@@ -38,8 +66,13 @@ class WordRepository:
         await self.db.flush()
 
     async def link_user_word(self, user_id, word_id):
+        if await self.exists_user_word(user_id, word_id):
+            return None
+
         user_word = UserWord(user_id=user_id, word_id=word_id)
         self.db.add(user_word)
+        await self.db.flush()
+        return user_word
 
     async def exists_user_word(self, user_id, word_id):
         stmt = select(UserWord).where(UserWord.user_id == user_id, UserWord.word_id == word_id)
@@ -70,16 +103,18 @@ class WordRepository:
         return word_category
 
     async def count_user_links(self, word_id):
-        stmt = select(UserWord).where(UserWord.word_id == word_id)
+        stmt = select(func.count()).select_from(UserWord).where(UserWord.word_id == word_id)
         result = await self.db.execute(stmt)
-        return len(result.scalars().all())
+        return int(result.scalar_one())
 
-    async def update_word(self, word: Word, english: str, portuguese: str, image_key: str, audio_key: str):
+    async def update_word(self, word: Word, english: str, portuguese: str, image_key: str, audio_key: str, owner_user_id=None):
         word.english = english
         word.portuguese = portuguese
         word.image_key = image_key
         word.audio_key = audio_key
+        word.owner_user_id = owner_user_id
         self.db.add(word)
+        await self.db.flush()
         return word
 
     async def delete_phrases_by_word_id(self, word_id):
@@ -109,6 +144,7 @@ class WordRepository:
 
         if user_word:
             await self.db.delete(user_word)
+            await self.db.flush()
 
         return user_word
 
@@ -121,3 +157,4 @@ class WordRepository:
 
     async def delete_word(self, word: Word):
         await self.db.delete(word)
+        await self.db.flush()

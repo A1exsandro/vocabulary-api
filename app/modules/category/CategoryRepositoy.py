@@ -1,3 +1,4 @@
+from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select
 
@@ -23,7 +24,8 @@ class CategoryRepository:
         self.db.add(user_category)
 
     async def get_category_by_name(self, name: str):
-        stmt = select(Category).where(Category.name == name)
+        normalized = name.lower()
+        stmt = select(Category).where(func.lower(Category.name) == normalized)
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
