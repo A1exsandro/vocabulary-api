@@ -8,6 +8,7 @@ from app.application.category.use_cases.delete_category import DeleteCategoryUse
 from app.application.category.use_cases.get_categories_by_user import GetCategoriesByUserUseCase
 from app.application.category.use_cases.update_category import UpdateCategoryUseCase
 from app.core.config import get_db
+from app.core.auth import AuthenticatedUser, ensure_same_user, require_authenticated_request
 
 from app.modules.category.CategorySchema import (
     CategoryCreate,
@@ -26,8 +27,10 @@ router = APIRouter(
 @router.post("", response_model=CategoryResponse, response_model_exclude_none=True)
 async def create_category(
     create_form: CategoryCreate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    authenticated_user: AuthenticatedUser = Depends(require_authenticated_request),
 ):
+    ensure_same_user(authenticated_user, create_form.user_id)
     return await CreateCategoryUseCase(db, get_vocabulary_enricher()).execute(create_form)
 
 
@@ -35,8 +38,10 @@ async def create_category(
 async def update_category(
     category_id: UUID,
     update_form: CategoryUpdate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    authenticated_user: AuthenticatedUser = Depends(require_authenticated_request),
 ):
+    ensure_same_user(authenticated_user, update_form.user_id)
     return await UpdateCategoryUseCase(db, get_vocabulary_enricher()).execute(category_id, update_form)
 
 
@@ -44,8 +49,10 @@ async def update_category(
 async def delete_category(
     category_id: UUID,
     delete_form: CategoryDelete,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    authenticated_user: AuthenticatedUser = Depends(require_authenticated_request),
 ):
+    ensure_same_user(authenticated_user, delete_form.user_id)
     return await DeleteCategoryUseCase(db).execute(category_id, delete_form)
 
 

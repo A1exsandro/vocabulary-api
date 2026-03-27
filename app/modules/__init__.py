@@ -1,6 +1,10 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
-router = APIRouter()
+from app.core.auth import require_authenticated_request
+
+router = APIRouter(
+    dependencies=[Depends(require_authenticated_request)]
+)
 
 from app.modules.category.category_router import router as category_router
 from app.modules.text.text_router import router as text_router
