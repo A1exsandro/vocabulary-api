@@ -42,6 +42,8 @@ def generate_sentences(word: str):
     3. Provide the Portuguese translation for the corrected word.
     4. Create 3 very simple English sentences using the corrected word.
     5. Provide a Portuguese translation for each sentence.
+    6. Classify the corrected word into exactly one grammatical class using one of these slugs:
+       substantivos, pronomes, verbos, adjetivos, adverbios, preposicoes, conjuncoes, interjeicoes, artigos.
 
     Return ONLY JSON with this shape:
 
@@ -49,6 +51,7 @@ def generate_sentences(word: str):
       \"valid\": true,
       \"correct_word\": \"\",
       \"translation\": \"\",
+      \"grammar_class_slug\": \"\",
       \"sentences\": [
         {{\"english\": \"\", \"portuguese\": \"\"}}
       ]

@@ -16,6 +16,7 @@ class Word(SQLModel, table=True):
     phrases: list["Phrase"] = Relationship(back_populates="word")
     categories: list["WordCategory"] = Relationship(back_populates="word")
     users: list["UserWord"] = Relationship(back_populates="word")
+    grammar_classes: list["WordGrammarClass"] = Relationship(back_populates="word")
 
 
 class UserWord(SQLModel, table=True):
@@ -34,6 +35,27 @@ class WordCategory(SQLModel, table=True):
     word_id: UUID = Field(foreign_key="words.id", primary_key=True)
 
     word: "Word" = Relationship(back_populates="categories")
+
+
+class GrammarClass(SQLModel, table=True):
+    __tablename__ = "grammar_classes"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    slug: str = Field(index=True, unique=True)
+    name: str = Field(index=True, unique=True)
+    description: str | None = None
+
+    words: list["WordGrammarClass"] = Relationship(back_populates="grammar_class")
+
+
+class WordGrammarClass(SQLModel, table=True):
+    __tablename__ = "word_grammar_classes"
+
+    word_id: UUID = Field(foreign_key="words.id", primary_key=True)
+    grammar_class_id: UUID = Field(foreign_key="grammar_classes.id", primary_key=True)
+
+    word: "Word" = Relationship(back_populates="grammar_classes")
+    grammar_class: GrammarClass = Relationship(back_populates="words")
 
 
 class Phrase(SQLModel, table=True):

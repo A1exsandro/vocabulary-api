@@ -26,6 +26,7 @@ class DeleteWordUseCase:
         if await self.repository.count_user_links(word_id) == 0:
             await self.repository.delete_phrases_by_word_id(word_id)
             await self.repository.delete_word_categories_by_word_id(word_id)
+            await self.repository.delete_word_grammar_classes_by_word_id(word_id)
             await self.repository.delete_word(word)
 
         await commit_rollback(self.db)

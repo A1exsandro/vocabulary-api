@@ -8,12 +8,16 @@ class WordCreate(BaseModel):
     english: str
     user_id: str
     category_id: str
+    grammar_class_slugs: list[str] = Field(default_factory=list)
+    use_ai_grammar_classification: bool = False
 
 
 class WordUpdate(BaseModel):
     english: str
     user_id: str
     category_id: UUID
+    grammar_class_slugs: list[str] = Field(default_factory=list)
+    use_ai_grammar_classification: bool = False
 
 
 class WordDelete(BaseModel):

@@ -1,11 +1,13 @@
 import os
 from typing import AsyncGenerator
+from uuid import uuid4
 
 from dotenv import load_dotenv
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel
+from app.core.grammar_class_data import GRAMMAR_CLASSES
 
 load_dotenv()
 
@@ -84,6 +86,29 @@ class AsyncDatabaseSession:
             )
             await conn.execute(text("DROP INDEX IF EXISTS ix_words_english"))
             await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_words_english ON words (english)"))
+            await conn.execute(
+                text("CREATE TABLE IF NOT EXISTS grammar_classes (id UUID PRIMARY KEY, slug VARCHAR UNIQUE, name VARCHAR UNIQUE, description VARCHAR)")
+            )
+            await conn.execute(
+                text("CREATE TABLE IF NOT EXISTS word_grammar_classes (word_id UUID NOT NULL, grammar_class_id UUID NOT NULL, PRIMARY KEY (word_id, grammar_class_id), FOREIGN KEY (word_id) REFERENCES words(id), FOREIGN KEY (grammar_class_id) REFERENCES grammar_classes(id))")
+            )
+
+            for grammar_class in GRAMMAR_CLASSES:
+                await conn.execute(
+                    text(
+                        """
+                        INSERT INTO grammar_classes (id, slug, name, description)
+                        VALUES (:id, :slug, :name, :description)
+                        ON CONFLICT (slug) DO UPDATE
+                        SET name = EXCLUDED.name,
+                            description = EXCLUDED.description
+                        """
+                    ),
+                    {
+                        "id": str(uuid4()),
+                        **grammar_class,
+                    },
+                )
 
     async def warmup(self):
         async with self.get_session() as session:

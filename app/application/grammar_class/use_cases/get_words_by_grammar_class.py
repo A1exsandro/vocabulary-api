@@ -1,11 +1,11 @@
 import os
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
 from app.integrations.s3_client import s3_client
-from app.modules.word.WordModel import UserWord, Word, WordCategory, WordGrammarClass
+from app.modules.word.WordModel import GrammarClass, UserWord, Word, WordGrammarClass
 
 S3_AUDIO_BUCKET_NAME = os.getenv("S3_AUDIO_BUCKET_NAME")
 S3_IMAGE_BUCKET_NAME = os.getenv("S3_IMAGE_BUCKET_NAME")
@@ -22,16 +22,18 @@ def _build_presigned_url(bucket_name: str | None, key: str | None) -> str | None
     )
 
 
-class GetWordsByUserUseCase:
+class GetWordsByGrammarClassUseCase:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def execute(self, user_id: str, category_id: str):
+    async def execute(self, user_id: str, slug: str):
         stmt = (
             select(Word)
-            .join(UserWord)
-            .join(WordCategory)
-            .where(UserWord.user_id == user_id, WordCategory.category_id == category_id)
+            .join(WordGrammarClass)
+            .join(GrammarClass)
+            .outerjoin(UserWord)
+            .where(GrammarClass.slug == slug)
+            .where((UserWord.user_id == user_id) | (Word.owner_user_id.is_(None)))
             .options(selectinload(Word.phrases), selectinload(Word.grammar_classes).selectinload(WordGrammarClass.grammar_class))
         )
 
