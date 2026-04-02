@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -7,7 +8,14 @@ from app.core.config import db
 from app.core.exception_handlers import register_exception_handlers
 from app.modules import router as modules_router
 
-origins = ["*"]
+origins = [
+    origin.strip()
+    for origin in os.getenv(
+        "CORS_ALLOW_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173",
+    ).split(",")
+    if origin.strip()
+]
 
 
 @asynccontextmanager

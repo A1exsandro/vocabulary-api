@@ -114,7 +114,13 @@ async def delete_word(
 
 
 @router.get("/words")
-async def get_user_words(user_id: str, category_id: str, db: AsyncSession = Depends(get_db)):
+async def get_user_words(
+    user_id: str,
+    category_id: str,
+    db: AsyncSession = Depends(get_db),
+    authenticated_user: AuthenticatedUser = Depends(require_authenticated_request),
+):
+    ensure_same_user(authenticated_user, user_id)
     return await GetWordsByUserUseCase(db).execute(user_id, category_id)
 
 
