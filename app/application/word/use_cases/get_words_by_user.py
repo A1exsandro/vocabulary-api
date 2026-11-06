@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
-from app.integrations.s3_client import s3_client
+from app.integrations.s3_client import s3_public
 from app.modules.word.WordModel import UserWord, Word, WordCategory, WordGrammarClass
 
 S3_AUDIO_BUCKET_NAME = os.getenv("S3_AUDIO_BUCKET_NAME")
@@ -15,7 +15,7 @@ def _build_presigned_url(bucket_name: str | None, key: str | None) -> str | None
     if not bucket_name or not key:
         return None
 
-    return s3_client.generate_presigned_url(
+    return s3_public.generate_presigned_url(
         "get_object",
         Params={"Bucket": bucket_name, "Key": key},
         ExpiresIn=600,

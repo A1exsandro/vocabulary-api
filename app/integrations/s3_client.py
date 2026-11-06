@@ -29,4 +29,5 @@ s3_public = boto3.client(
     aws_access_key_id=os.getenv("S3_ACCESS_KEY"),
     aws_secret_access_key=os.getenv("S3_SECRET_KEY"),
     region_name=os.getenv("S3_REGION"),
+    config=Config(signature_version="s3v4"),
 )

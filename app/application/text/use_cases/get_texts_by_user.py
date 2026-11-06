@@ -2,7 +2,7 @@ import os
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.integrations.s3_client import s3_client
+from app.integrations.s3_client import s3_public
 from app.modules.text.TextRepository import TextRepository
 from app.modules.text.TextSchema import TextListItem
 
@@ -21,7 +21,7 @@ class GetTextsByUserUseCase:
         for entry in entries:
             audio_url = None
             if entry.audio_key:
-                audio_url = s3_client.generate_presigned_url(
+                audio_url = s3_public.generate_presigned_url(
                     "get_object",
                     Params={"Bucket": S3_AUDIO_BUCKET_NAME, "Key": entry.audio_key},
                     ExpiresIn=600,
