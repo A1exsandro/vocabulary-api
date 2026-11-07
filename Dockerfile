@@ -1,34 +1,24 @@
-# Usar uma imagem base do Python
-FROM python:3.11-slim
+FROM python:3.12-slim
 
-# Instalar locale e timezone
-RUN apt-get update && apt-get install -y \
-    locales \
-    tzdata \
- && sed -i '/pt_BR.UTF-8/s/^# //g' /etc/locale.gen \
- && locale-gen pt_BR.UTF-8 \
- && apt-get clean
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    TZ=America/Cuiaba
 
-# Configurar locale
-ENV LANG=pt_BR.UTF-8 \
-    LANGUAGE=pt_BR:pt \
-    LC_ALL=pt_BR.UTF-8
-
-# 🔥 Configurar timezone
-ENV TZ=America/Cuiaba
-
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
-    && echo $TZ > /etc/timezone
-
-# Definir diretório de trabalho
 WORKDIR /app
 
-# Instalar dependências
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar código
-COPY . .
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt \
+    && useradd --create-home --uid 10001 appuser
+
+COPY --chown=appuser:appuser app ./app
+
+USER appuser
 
 EXPOSE 8000
 

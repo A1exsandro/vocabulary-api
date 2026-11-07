@@ -5,7 +5,7 @@ import requests
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-OPENROUTER_MODEL = "google/gemma-3n-e2b-it:free"
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "nvidia/nemotron-3.5-lightning:free")
 
 
 def _request_json(prompt: str) -> dict:
@@ -26,6 +26,7 @@ def _request_json(prompt: str) -> dict:
         },
     )
 
+    response.raise_for_status()
     data = response.json()
     content = data["choices"][0]["message"]["content"]
     content = content.replace("```json", "").replace("```", "").strip()
