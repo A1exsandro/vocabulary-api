@@ -22,7 +22,7 @@ class AsyncDatabaseSession:
     def init(self):
         self.engine = create_async_engine(
             DB_CONFIG,
-            echo=True,
+            echo=False,
             future=True,
             pool_size=5,
             max_overflow=10,
