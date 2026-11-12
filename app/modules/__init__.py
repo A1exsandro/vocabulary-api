@@ -1,19 +1,6 @@
-from fastapi import APIRouter, Depends
+"""Feature modules.
 
-from app.core.auth import require_authenticated_request
-
-router = APIRouter(
-    dependencies=[Depends(require_authenticated_request)]
-)
-
-from app.modules.category.category_router import router as category_router
-from app.modules.grammar_class.grammar_class_router import router as grammar_class_router
-from app.modules.text.text_router import router as text_router
-from app.modules.user.user_router import router as user_router
-from app.modules.word.word_router import router as word_router
-
-router.include_router(category_router)
-router.include_router(grammar_class_router)
-router.include_router(word_router)
-router.include_router(text_router)
-router.include_router(user_router)
+Keep this package initializer free of imports. The router aggregation lives in
+``app.modules.router``, so that importing a model does not import the routers.
+That import chain caused a circular import with the use cases.
+"""

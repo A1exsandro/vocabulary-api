@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import db
 from app.core.exception_handlers import register_exception_handlers
-from app.modules import router as modules_router
+from app.modules.router import router as modules_router
 
 origins = [
     origin.strip()
