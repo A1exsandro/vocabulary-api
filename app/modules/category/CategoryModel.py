@@ -11,7 +11,7 @@ class Category(SQLModel, table=True):
 
 
 class UserCategory(SQLModel, table=True):
-    __tablename__ = "user_cotegories"
+    __tablename__ = "user_categories"
 
     user_id: str = Field(primary_key=True)
 
