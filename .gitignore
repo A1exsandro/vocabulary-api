@@ -22,6 +22,7 @@ __pycache__
 
 # Scripts
 scripts/*
+!scripts/sql/
 # certs/*
 k8s/homolog/coneq-api-config.yaml
 k8s/coneq-api-config.yaml
