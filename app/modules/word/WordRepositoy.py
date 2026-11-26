@@ -2,6 +2,7 @@ from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select
 
+from app.modules.grammar_form.GrammarFormRepository import delete_cards_outside_classes, delete_user_word_cards
 from app.modules.word.WordModel import GrammarClass, Phrase, UserWord, Word, WordCategory, WordGrammarClass
 
 
@@ -167,6 +168,7 @@ class WordRepository:
             )
 
         await self.db.flush()
+        await delete_cards_outside_classes(self.db, word_id, [item.id for item in grammar_classes])
 
     async def unlink_user_word(self, user_id, word_id):
         stmt = select(UserWord).where(UserWord.user_id == user_id, UserWord.word_id == word_id)
@@ -176,6 +178,7 @@ class WordRepository:
         if user_word:
             await self.db.delete(user_word)
             await self.db.flush()
+            await delete_user_word_cards(self.db, user_id, word_id)
 
         return user_word
 
@@ -187,5 +190,6 @@ class WordRepository:
             await self.db.delete(word_category)
 
     async def delete_word(self, word: Word):
+        await delete_cards_outside_classes(self.db, word.id, [])
         await self.db.delete(word)
         await self.db.flush()

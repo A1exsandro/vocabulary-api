@@ -44,4 +44,12 @@ GRAMMAR_CLASSES = [
         "name": "Artigos",
         "description": "Palavras que acompanham substantivos para defini-los ou indefini-los.",
     },
+    {
+        "slug": "numerais",
+        "name": "Numerais",
+        "description": "Palavras que indicam quantidade, ordem, multiplicação ou fração.",
+    },
 ]
+
+# The slugs the API accepts, in the order above.
+GRAMMAR_CLASS_SLUGS = [item["slug"] for item in GRAMMAR_CLASSES]
