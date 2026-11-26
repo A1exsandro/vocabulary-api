@@ -147,13 +147,67 @@ Response:
 
 `DELETE /api/vocabulary/word/{word_id}`
 
+## Grammar Class
+
+### Listar classes do usuário
+
+`GET /api/vocabulary/grammar-class/by_user?user_id=...`
+
+São 10 classes; `numerais` é a 10ª (vocabulary-api#16).
+
+### Listar palavras de uma classe
+
+`GET /api/vocabulary/grammar-class/{slug}/words?user_id=...`
+
+### Ler o grammar card de uma palavra
+
+`GET /api/vocabulary/grammar-class/{slug}/words/{word_id}/forms?user_id=...`
+
+```json
+{
+  "wordId": "uuid",
+  "slug": "verbos",
+  "status": "ai_generated",
+  "forms": {
+    "past": { "english": "drank", "portuguese": "bebeu", "spanish": "bebió" },
+    "regularity": { "english": "irregular", "portuguese": null, "spanish": null }
+  }
+}
+```
+
+`status` é `null` enquanto o card não tem formas.
+
+### Salvar o grammar card de uma palavra
+
+`PUT /api/vocabulary/grammar-class/{slug}/words/{word_id}/forms`
+
+```json
+{
+  "user_id": "keycloak-sub",
+  "status": "verified",
+  "forms": {
+    "past": { "english": "drank", "portuguese": "bebeu", "spanish": "bebió" }
+  }
+}
+```
+
+- Substitui o card inteiro; campos vazios são descartados e `forms: {}` esvazia o card.
+- Os campos de cada classe são os de `app/core/grammar_forms.py`, iguais aos do app mobile (`src/db/grammarForms.ts`). Um campo de escolha (`regularity`, `countability`) guarda o valor em `english`.
+- Status: `unverified`, `ai_generated` ou `verified`.
+- Os cards são por usuário. Remover a palavra ou tirar a classe dela apaga os cards correspondentes.
+
 ## Códigos de erro esperados
+
+### 400
+
+- campo desconhecido para a classe, escolha fora das opções ou tradução sem o inglês.
 
 ### 404
 
 - categoria não existe;
 - palavra não existe;
-- vínculo não pertence ao usuário.
+- vínculo não pertence ao usuário;
+- classe gramatical não existe, ou a palavra não tem a classe.
 
 ### 409
 
